@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Generated at evaluation time -- never commit this
+data/output/
+
+# Editor/OS cruft
+.vscode/
+.idea/
+.DS_Store
