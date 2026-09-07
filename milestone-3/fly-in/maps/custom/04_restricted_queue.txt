@@ -1,0 +1,8 @@
+# Custom edge case: two drones must both queue for the same
+# restricted (2-turn) connection, exercising the two-turn link lock.
+nb_drones: 2
+start_hub: start 0 0
+hub: tunnel 1 0 [zone=restricted color=red]
+end_hub: goal 2 0
+connection: start-tunnel
+connection: tunnel-goal

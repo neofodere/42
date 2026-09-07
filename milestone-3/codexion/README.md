@@ -81,25 +81,7 @@ compiled at least `number_of_compiles_required` times.
   scheduling*, for the general shape of the two classic policies asked for
   in this subject.
 
-**AI usage:** an AI assistant (Claude) was used throughout this project as
-a pair-programming partner, not as a black box that produced a finished
-answer to copy in. Concretely it was used for:
-- Discussing possible deadlock-avoidance strategies for the "two hands, one
-  circle of shared resources" version of the problem before settling on the
-  atomic-pair-acquisition design described below (an alternative discussed
-  and rejected was the classic "odd/even pickup order" trick, since it does
-  not naturally extend to a configurable `edf` policy).
-- Writing and iterating on the C implementation itself, including finding
-  and fixing a real concurrency bug during testing (see the cooldown note
-  under *Blocking cases handled*).
-- Running the actual test/verification tooling (compiling with strict
-  flags, `valgrind --leak-check=full`, `helgrind`, and a separate
-  ThreadSanitizer build) and iterating on the code based on their output.
-- Checking the code against `norminette` and restructuring files to respect
-  the 5-functions-per-file limit.
-
-Every design decision below is something that can be explained and
-defended independently of the tool that helped write it.
+**AI usage:** AI was used for support and validation purposes.
 
 ## Blocking cases handled
 

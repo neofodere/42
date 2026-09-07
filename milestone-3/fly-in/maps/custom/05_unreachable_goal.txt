@@ -1,0 +1,7 @@
+# Custom edge case: the goal is topologically unreachable, so the
+# simulation must fail cleanly instead of hanging or crashing.
+nb_drones: 1
+start_hub: start 0 0
+hub: island 1 1
+end_hub: goal 2 2
+connection: start-island

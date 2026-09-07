@@ -1,0 +1,8 @@
+# Custom edge case: many drones funneled through one max_drones=1 hub,
+# exercising strict FIFO-style waiting.
+nb_drones: 6
+start_hub: start 0 0 [color=green]
+hub: gate 1 0 [color=orange max_drones=1]
+end_hub: goal 2 0 [color=red]
+connection: start-gate
+connection: gate-goal
