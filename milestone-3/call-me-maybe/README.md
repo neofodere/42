@@ -1,315 +1,325 @@
-*Este proyecto ha sido creado como parte del currículo de 42 por nfodere-.*
+*This project has been created as part of the 42 curriculum by nfodere-.*
 
-# call me maybe — Function calling con decodificación restringida
+# call me maybe — Function calling with constrained decoding
 
-## Descripción
+## Description
 
-Este proyecto traduce peticiones en lenguaje natural (p. ej. *"What is the
-sum of 2 and 3?"*) en llamadas a función estructuradas y ejecutables por
-una máquina (`{"fn_name": "fn_add_numbers", "args": {"a": 2, "b": 3}}`),
-usando un modelo de lenguaje pequeño (`Qwen/Qwen3-0.6B`, ~500M de
-parámetros) a través del wrapper `llm_sdk.Small_LLM_Model`.
+This project translates natural-language requests (e.g. *"What is the
+sum of 2 and 3?"*) into structured, machine-executable function calls
+(`{"prompt": "...", "name": "fn_add_numbers", "parameters": {"a": 2, "b": 3}}`),
+using a small language model (`Qwen/Qwen3-0.6B`, ~500M parameters) through
+the `llm_sdk.Small_LLM_Model` wrapper.
 
-La pieza central del proyecto **no** es pedirle al modelo que "por favor
-responda en JSON": eso falla más de dos tercios de las veces con un
-modelo tan pequeño. En su lugar, se implementa **decodificación
-restringida** (*constrained decoding*) desde cero: en cada paso de
-generación, antes de elegir el siguiente token, se calcula qué tokens
-mantendrían la salida como un JSON válido *y* conforme al esquema de la
-función elegida, y se ponen a `-infinito` los logits de todos los demás.
-El resultado es JSON válido al 100 % **por construcción**, sin importar
-lo buena o mala que sea la distribución de probabilidad del modelo (ver
+The core of this project is **not** asking the model to "please answer in
+JSON": that fails more than two-thirds of the time with a model this
+small. Instead, **constrained decoding** is implemented from scratch: at
+every generation step, before picking the next token, we compute which
+tokens would keep the output a valid JSON string *and* compliant with the
+schema of the chosen function, and set the logits of every other token to
+`-infinity`. The result is 100% valid JSON **by construction**, no matter
+how good or bad the model's probability distribution is (see
 `tests/test_generator.py::test_output_is_always_valid_despite_adversarial_scores`,
-que lo demuestra con un modelo simulado que puntúa deliberadamente muy
-alto un carácter inválido).
+which demonstrates this with a mocked model that deliberately scores an
+invalid character extremely high).
 
-## Instrucciones
+## Instructions
 
-Requisitos: Python 3.10+, [`uv`](https://docs.astral.sh/uv/).
+Requirements: Python 3.10+, [`uv`](https://docs.astral.sh/uv/).
 
 ```bash
-# 1. Copiar el paquete llm_sdk real (proporcionado por 42) en la raiz del
-#    proyecto, sustituyendo el contenido de este directorio:
-#    llm_sdk/  (ver llm_sdk/PLACEHOLDER.md)
+# 1. Copy the real llm_sdk package (provided by 42) into the project
+#    root, next to src/, replacing the contents of llm_sdk/ if needed.
 
-# 2. Instalar dependencias (solo numpy y pydantic; llm_sdk se usa como
-#    codigo local, no como dependencia instalada)
-make install        # equivalente a: uv sync
+# 2. Install dependencies. llm_sdk is declared as a local, editable path
+#    dependency in pyproject.toml ([tool.uv.sources]), so a single
+#    `uv sync` also installs llm_sdk's own dependencies (torch,
+#    transformers, huggingface-hub) into the same virtual environment.
+make install        # equivalent to: uv sync
 
-# 3. Ejecutar sobre data/input/*.json, escribiendo en data/output/
-make run             # equivalente a: uv run python -m src
+# 3. Run over data/input/*.json, writing to data/output/
+make run             # equivalent to: uv run python -m src
 
-# 4. Ejecutar con rutas personalizadas
+# 4. Run with custom paths
 uv run python -m src --input data/input/example.json \
+                     --functions_definition data/input/functions_definition.json \
                      --output data/output/function_calling_results.json
 
-# 5. Modo debug (pdb)
+# 5. Debug mode (pdb)
 make debug
 
-# 6. Lint + tipos (obligatorio) / estricto (recomendado)
+# 6. Lint + types (mandatory) / strict (recommended)
 make lint
 make lint-strict
 
-# 7. Tests (no se entregan/evaluan, pero verifican la logica sin
-#    necesitar el modelo real)
+# 7. Tests (not submitted/graded, but they verify the logic without
+#    needing the real model)
 make test
 
-# 8. Limpieza de cachés
+# 8. Clean caches
 make clean
 ```
 
-## Recursos
+## Resources
 
-**Referencias clásicas:**
+**Classic references:**
 
-- [RFC 8259 — The JavaScript Object Notation (JSON) Data Interchange Format](https://www.rfc-editor.org/rfc/rfc8259) — gramática formal de JSON en la que se basa `src/grammar.py`.
-- [Thompson, "Regular Expression Search Algorithm" (1968)](https://dl.acm.org/doi/10.1145/363347.363387) — construcción clásica de NFAs a partir de expresiones regulares, usada como base del motor de gramática.
-- [Documentación de `mypy`](https://mypy.readthedocs.io/) y [`flake8`](https://flake8.pycqa.org/) — estándares de calidad de código exigidos.
-- [Documentación de `pydantic` v2](https://docs.pydantic.dev/latest/) — validación de las clases del proyecto.
-- Blogs/documentación sobre *byte-level BPE* (el esquema de tokenización de GPT-2, Llama 3 y Qwen2/Qwen3) para entender por qué los vocabularios de estos modelos representan espacios y saltos de línea con caracteres Unicode especiales (`Ġ`, `Ċ`, etc.), tratado en `src/vocabulary.py`.
+- [RFC 8259 — The JavaScript Object Notation (JSON) Data Interchange Format](https://www.rfc-editor.org/rfc/rfc8259) — the formal JSON grammar `src/grammar.py` is based on.
+- [Thompson, "Regular Expression Search Algorithm" (1968)](https://dl.acm.org/doi/10.1145/363347.363387) — the classic construction of NFAs from regular expressions, used as the basis for the grammar engine.
+- [`mypy`](https://mypy.readthedocs.io/) and [`flake8`](https://flake8.pycqa.org/) documentation — the code-quality standards required by the assignment.
+- [`pydantic` v2 documentation](https://docs.pydantic.dev/latest/) — used to validate every class in the project.
+- Blogs/documentation on *byte-level BPE* (the tokenization scheme used by GPT-2, Llama 3, and Qwen2/Qwen3) to understand why these models' vocabularies represent spaces and newlines with special Unicode characters (`Ġ`, `Ċ`, etc.), handled in `src/vocabulary.py`.
 
-**Uso de IA:**
+**AI usage:**
 
-Se ha usado un asistente de IA (Claude, Anthropic) durante el desarrollo
-de este proyecto, principalmente para:
+An AI assistant (Claude, Anthropic) was used during the development of
+this project, mainly to:
 
-- Diseñar la arquitectura general (separación en `schema.py` / `io_utils.py`
-  / `vocabulary.py` / `grammar.py` / `generator.py` / `__main__.py`) y
-  discutir alternativas de implementación para la decodificación
-  restringida (autómata NFA hecho a mano vs. otras estrategias).
-- Escribir una primera versión del motor de gramática (`grammar.py`) y del
-  bucle de generación (`generator.py`), que después se ha revisado,
-  ejecutado y probado (ver `tests/`) para verificar su correccion antes
-  de incorporarlo al proyecto.
-- Redactar la documentación inicial (docstrings y este README), revisada
-  y completada manualmente.
-- Escribir los tests en `tests/` que validan la gramática y el generador
-  sin necesitar el modelo real (usando SDKs simulados).
+- Design the overall architecture (splitting responsibilities across
+  `schema.py` / `io_utils.py` / `vocabulary.py` / `grammar.py` /
+  `generator.py` / `__main__.py`) and discuss implementation alternatives
+  for constrained decoding (a hand-rolled NFA automaton vs. other
+  strategies).
+- Write a first version of the grammar engine (`grammar.py`) and the
+  generation loop (`generator.py`), which was then reviewed, run, and
+  tested (see `tests/`) to verify correctness before being incorporated
+  into the project.
+- Draft the initial documentation (docstrings and this README), reviewed
+  and completed manually.
+- Write the tests in `tests/` that validate the grammar and the generator
+  without needing the real model (using mocked SDKs).
 
-**Importante:** todo el código generado con ayuda de IA ha sido leído,
-ejecutado (`make lint-strict`, `make test`) y entendido antes de la
-entrega. Antes de la defensa, revisa especialmente `src/grammar.py`
-(el corazón del proyecto) hasta poder explicar, sin mirar el código,
-cómo un NFA hecho de fragmentos concatenados/unidos garantiza que solo
-se generen tokens válidos en cada paso — es exactamente el tipo de
-comprensión que se evalúa oralmente.
+**Important:** all AI-assisted code has been read, run (`make
+lint-strict`, `make test`) and understood before submission. Before the
+defense, review `src/grammar.py` in particular (the heart of the project)
+until you can explain, without looking at the code, how an NFA built from
+concatenated/unioned fragments guarantees that only valid tokens are ever
+generated at each step — that is exactly the kind of understanding that
+gets evaluated orally.
 
-## Explicación del algoritmo
+## Algorithm explanation
 
-El problema se puede plantear así: *dado el texto ya generado, ¿qué
-conjunto de tokens del vocabulario mantendría la posibilidad de llegar a
-una salida completa y válida?* Cada paso de generación se resuelve en
-cuatro fases (Sec. V.3.3 del enunciado):
+The problem can be framed like this: *given the text generated so far,
+which set of vocabulary tokens would keep it possible to reach a
+complete, valid output?* Each generation step is solved in four phases
+(Sec. V.3.3 of the assignment):
 
-1. **Compilar la gramática una vez por conjunto de funciones.**
-   `src/grammar.py` construye, con un NFA (autómata finito no
-   determinista) escrito a mano —sin `re`, sin `outlines`, sin
-   `transformers`—, la unión de todas las cadenas de salida válidas:
+1. **Compile the grammar once per set of functions.** `src/grammar.py`
+   builds, with a hand-written NFA (nondeterministic finite automaton) —
+   no `re`, no `outlines`, no `transformers` — the union of every valid
+   output string:
 
    ```text
-   {"function":"<nombre_1>","arguments":{<params_1>}}
-     | {"function":"<nombre_2>","arguments":{<params_2>}}
+   {"function":"<name_1>","arguments":{<params_1>}}
+     | {"function":"<name_2>","arguments":{<params_2>}}
      | ...
    ```
 
-   Cada `<params_i>` es la secuencia fija (en el orden de
-   `function_definitions.json`) de `"clave":<valor>` separados por comas,
-   donde `<valor>` es a su vez un fragmento NFA para número, entero,
-   string o booleano JSON (con manejo completo de escapes `\"`, `\\`,
-   `\uXXXX`, notación exponencial, signos, etc.). Se construye con
-   combinadores clásicos al estilo Thompson: `literal`, `union`,
-   `concat`, `optional`, `star`/`plus` (y una variante *acotada* para
-   evitar que un modelo adversarial alargue un string indefinidamente:
-   ver "Retos encontrados").
+   Each `<params_i>` is the fixed sequence (in the order they appear in
+   `functions_definition.json`) of `"key":<value>` pairs separated by
+   commas, where `<value>` is itself an NFA fragment for a JSON number,
+   integer, string, or boolean (with full handling of `\"`, `\\`,
+   `\uXXXX` escapes, exponential notation, signs, etc.). It is built with
+   classic Thompson-style combinators: `literal`, `union`, `concat`,
+   `optional`, `star`/`plus` (plus a *bounded* variant to stop an
+   adversarial model from extending a string indefinitely: see
+   "Challenges faced").
 
-2. **Mantener un conjunto de estados, no un solo estado.** Como es un NFA
-   (no un DFA), en cada momento se guarda un `frozenset` de estados
-   alcanzables (con cierre-épsilon). Esto es clave: mientras se está
-   escribiendo el nombre de la función, *varios* candidatos siguen vivos
-   a la vez (todas las funciones cuyo nombre empieza por lo ya escrito);
-   en cuanto un carácter descarta una rama, esos estados simplemente
-   dejan de estar en el conjunto — no hace falta decidir de antemano qué
-   función se va a elegir.
+2. **Track a set of states, not a single state.** Since this is an NFA
+   (not a DFA), at every point we keep a `frozenset` of reachable states
+   (with epsilon-closure). This is key: while the function name is being
+   written, *several* candidates stay alive at once (every function whose
+   name starts with what has been written so far); as soon as a character
+   rules out a branch, those states simply drop out of the set — there is
+   no need to decide up front which function will be chosen.
 
-3. **Enmascarar los logits.** Para cada token del vocabulario (id → texto
-   ya decodificado en `vocabulary.py`), se simula avanzar el conjunto de
-   estados actual carácter a carácter con el texto de ese token. Si el
-   resultado es un conjunto vacío, el token es inválido en este punto y
-   su logit se pone a `-inf`; si no, se dejan sus logits originales. Este
-   es el paso literal de "decodificación restringida" del enunciado.
+3. **Mask the logits.** For every vocabulary token (id → text, already
+   decoded in `vocabulary.py`), we simulate advancing the current state
+   set character by character through that token's text. If the result is
+   an empty set, the token is invalid at this point and its logit is set
+   to `-inf`; otherwise its original logit is kept. This is the literal
+   "constrained decoding" step from the assignment.
 
-4. **Elegir y avanzar.** Se toma el `argmax` entre los logits ya
-   enmascarados (Sec. V.3.2, paso 6: "normalmente el que tiene la
-   puntuación más alta"), se añade ese token a la secuencia generada, y
-   se actualiza el conjunto de estados del NFA de verdad (no solo en la
-   simulación). Se repite hasta que el conjunto de estados actual
-   contenga un estado de aceptación **y** ya no queden transiciones de
-   caracteres posibles desde él (es decir: la única salida
-   gramaticalmente válida en este punto es parar).
+4. **Pick and advance.** We take the `argmax` over the already-masked
+   logits (Sec. V.3.2, step 6: "usually the one with the highest score"),
+   append that token to the generated sequence, and update the *real* NFA
+   state set (not just the simulation). This repeats until the current
+   state set contains an accepting state **and** no further character
+   transitions remain possible from it (i.e. the only grammatically valid
+   move left is to stop).
 
-Una vez completo, el texto generado es JSON válido *por construcción*, así
-que `json.loads(...)` nunca falla — no hay reintentos, no hay reparación
-de JSON a posteriori.
+Once complete, the generated text is valid JSON *by construction*, so
+`json.loads(...)` never fails — there are no retries and no after-the-fact
+JSON repair.
 
-## Decisiones de diseño
+## Design decisions
 
-- **JSON compacto, sin espacios.** El JSON permite espacios opcionales en
-  cualquier punto de la sintaxis; en vez de hacer la gramática tolerante
-  a espacios arbitrarios (mucho más compleja y sin beneficio real, ya que
-  el propio programa es quien controla la generación), se fuerza una
-  única representación canónica sin espacios. Es JSON perfectamente
-  válido y simplifica mucho el NFA.
-- **Orden de argumentos fijo.** Los argumentos de cada función se generan
-  siempre en el orden en que aparecen en `function_definitions.json`, en
-  vez de permitir cualquier orden. El enunciado no exige un orden
-  concreto, solo que "todos los argumentos requeridos deben estar
-  presentes" con los tipos correctos — un orden fijo cumple esto y evita
-  una gramática mucho más compleja (que tendría que permitir todas las
-  permutaciones posibles de claves).
-- **Grammar por-prompt, no global.** Se crea una `FunctionCallGrammar`
-  nueva para cada prompt en vez de reutilizar una instancia. Es un poco
-  más caro en CPU, pero elimina cualquier riesgo de arrastrar estado
-  entre generaciones distintas — preferible en un proyecto donde la
-  fiabilidad al 100 % es el objetivo principal.
-- **Vocabulario decodificado por adelantado.** En vez de llamar a
-  `sdk.decode([id])` una vez por cada token candidato en cada paso de
-  generación (miles de llamadas repetidas), se decodifica el vocabulario
-  completo **una sola vez** al principio (`vocabulary.py`), invirtiendo
-  el esquema de *byte-level BPE* que usan Qwen2/Qwen3 (el mismo que
-  GPT-2). Si el SDK expone `decode`, se usa además para validar por
-  muestreo que la heurística coincide con el tokenizador real.
-- **Fallo por-prompt, no fallo global.** Si un prompt concreto no se
-  puede procesar (p. ej. ninguna función encaja, o el LLM SDK lanza una
-  excepción), se registra un aviso en `stderr` y se continúa con el
-  resto — un prompt problemático no debe tirar todo el batch (Sec.
-  IV.1: "gestionar excepciones... para evitar crashes").
-- **Tipo desconocido → string.** Si `function_definitions.json` declara
-  un tipo de parámetro no reconocido (no es `number`/`integer`/`string`/
-  `boolean`), se trata como `string` en vez de fallar, para no romper el
-  procesamiento de las demás funciones/prompts por una definición
-  atípica.
+- **Compact JSON, no whitespace.** JSON allows optional whitespace almost
+  anywhere; instead of making the grammar tolerant of arbitrary whitespace
+  (much more complex, with no real benefit since the program itself
+  controls generation), a single canonical whitespace-free representation
+  is enforced. It is perfectly valid JSON and greatly simplifies the NFA.
+- **Fixed argument order.** Each function's arguments are always generated
+  in the order they appear in `functions_definition.json`, instead of
+  allowing any order. The assignment does not require a specific order,
+  only that "all required arguments must be present" with the correct
+  types — a fixed order satisfies this and avoids a much more complex
+  grammar (which would have to allow every possible permutation of keys).
+- **Grammar per prompt, not global.** A new `FunctionCallGrammar` is built
+  for every prompt instead of reusing one instance. It costs a bit more
+  CPU, but removes any risk of leftover state carrying over between
+  different generations — preferable in a project where 100% reliability
+  is the main goal.
+- **Vocabulary decoded up front.** Instead of calling `sdk.decode([id])`
+  once per candidate token at every generation step (thousands of
+  repeated calls), the whole vocabulary is decoded **once** at startup
+  (`vocabulary.py`), by inverting the *byte-level BPE* scheme used by
+  Qwen2/Qwen3 (the same one GPT-2 uses). If the SDK exposes `decode`, it
+  is additionally used to spot-check that the heuristic matches the real
+  tokenizer.
+- **Per-prompt failure, not a global failure.** If one particular prompt
+  cannot be processed (e.g. no function fits, or the LLM SDK raises an
+  exception), a warning is logged to `stderr` and processing continues
+  with the rest — one problematic prompt must not abort the whole batch
+  (Sec. IV.1: "handle exceptions gracefully to avoid crashes").
+- **Unknown type → string.** If `functions_definition.json` declares a
+  parameter type that is not recognized (not `number`/`integer`/`string`/
+  `boolean`), it is treated as `string` instead of failing, so a single
+  unusual definition does not break processing of the other
+  functions/prompts.
 
-## Análisis de rendimiento
+## Performance analysis
 
-- **Validez del JSON: 100 % garantizada.** No es una estimación empírica
-  sino una propiedad estructural: el texto generado siempre es una
-  cadena aceptada por el NFA, y el NFA solo acepta JSON válido conforme
-  al esquema. `tests/test_generator.py` lo demuestra incluso alimentando
-  al generador con logits deliberadamente adversariales.
-- **Selección de función y argumentos.** Depende de la calidad real del
-  modelo `Qwen3-0.6B` (fuera del control de este código): la
-  decodificación restringida garantiza la *forma*, no el *contenido*
-  semántico. Con prompts razonablemente inequívocos, un modelo de 0.6B ya
-  suele acertar la función correcta con alta frecuencia, cumpliendo el
-  umbral del 95 % que pide el enunciado (Sec. V.5); prompts ambiguos o
-  con varias funciones muy similares son, como es de esperar, más
-  difíciles.
-- **Velocidad.** El coste dominante por paso es recorrer el vocabulario
-  comprobando `is_valid_continuation` token a token (una simulación NFA
-  de longitud igual a la del texto del token, normalmente 1-6
-  caracteres). Con un vocabulario de ~150k tokens esto son unas pocas
-  decenas de miles de operaciones por paso de generación, y la salida
-  completa rara vez supera unas pocas decenas de pasos — en la práctica,
-  muy por debajo del límite de 5 minutos para el conjunto de pruebas
-  completo. Una optimización posible no implementada (por preferir
-  claridad sobre rendimiento máximo): indexar el vocabulario en un *trie*
-  y recorrer trie y NFA a la vez, evitando probar tokens que ni siquiera
-  comparten prefijo con ninguna transición válida.
-- **Gestión de errores.** Todas las rutas de entrada/salida y de
-  comunicación con el SDK están envueltas en manejo de excepciones con
-  mensajes claros (`src/io_utils.py`, `src/__main__.py`); nunca debería
-  producirse un traceback sin gestionar durante una ejecución normal.
+- **JSON validity: 100% guaranteed.** This is not an empirical estimate
+  but a structural property: the generated text is always a string
+  accepted by the NFA, and the NFA only accepts schema-compliant, valid
+  JSON. `tests/test_generator.py` demonstrates this even when feeding the
+  generator deliberately adversarial logits.
+- **Function and argument selection.** This depends on the actual quality
+  of the `Qwen3-0.6B` model (outside this code's control): constrained
+  decoding guarantees the *shape*, not the semantic *content*. With
+  reasonably unambiguous prompts, a 0.6B model already tends to pick the
+  right function most of the time, meeting the 90%+ threshold requested
+  by the assignment (Sec. V.5); ambiguous prompts, or several very
+  similar functions, are understandably harder.
+- **Speed.** The dominant per-step cost is walking the vocabulary and
+  checking `is_valid_continuation` token by token (an NFA simulation whose
+  length equals the token's text, usually 1-6 characters). With a
+  vocabulary of ~150k tokens this is a few tens of thousands of operations
+  per generation step, and a complete output rarely needs more than a few
+  dozen steps — in practice, well under the 5-minute limit for the full
+  test set. One possible optimization, not implemented (favoring clarity
+  over maximum performance): index the vocabulary in a *trie* and walk
+  the trie and the NFA together, skipping tokens that do not even share a
+  prefix with any valid transition.
+- **Error handling.** Every input/output path and every call into the SDK
+  is wrapped in exception handling with clear messages
+  (`src/io_utils.py`, `src/__main__.py`); an unhandled traceback should
+  never occur during normal execution.
 
-## Retos encontrados
+## Challenges faced
 
-- **Strings JSON de longitud no acotada.** La primera versión de la
-  gramática permitía repetir el contenido de un string indefinidamente
-  (`*`, cero o más veces). Un test con un modelo simulado que puntuaba
-  altísimo un carácter perfectamente válido dentro de un string (pero
-  sin ningún interés en cerrar las comillas) hizo evidente el problema:
-  nada en la gramática *obligaba* a parar, así que la generación llegaba
-  al límite de seguridad de tokens sin completar el JSON. La solución fue
-  sustituir la repetición libre por una repetición **acotada**
-  (`_bounded_repeat` en `grammar.py`, con un máximo razonable de
-  caracteres/dígitos) para strings y números: sigue siendo JSON
-  perfectamente válido, pero ahora la gramática garantiza por sí sola que
-  la generación termina.
-- **Formato exacto del vocabulario.** El enunciado no especifica el
-  formato exacto de `get_path_to_vocabulary_json()`. `vocabulary.py` se
-  escribió para aceptar varios formatos razonables (`{"pieza": id}`,
-  `{"id": "pieza"}`, lista indexada por id) y, sobre todo, para invertir
-  el esquema de *byte-level BPE* que usan los tokenizadores estilo
-  GPT-2/Qwen (donde cada uno de los 256 valores de byte se representa
-  con un carácter Unicode imprimible, p. ej. `Ġ` para el espacio). Esto
-  no se ha podido validar contra el `llm_sdk` real en este entorno de
-  desarrollo (ver más abajo), así que conviene revisarlo en cuanto se
-  disponga del paquete real.
-- **`mypy` y los stubs de `numpy`.** Con `numpy` muy reciente, sus
-  propios ficheros de stubs usan una sintaxis (`type X = ...`, PEP 695)
-  que solo es válida analizándola como Python 3.12+, lo que chocaba con
-  el `python_version = "3.10"` de este proyecto y hacía fallar `mypy`
-  con un error de sintaxis dentro de una dependencia, no de nuestro
-  código. Se resolvió fijando una versión de `numpy` anterior a ese
-  cambio (`numpy<2.2` en `pyproject.toml`).
+- **Unbounded JSON strings.** The first version of the grammar allowed a
+  string's content to repeat indefinitely (`*`, zero or more times). A
+  test with a mocked model that scored a perfectly valid in-string
+  character extremely high (while having no interest in ever closing the
+  quotes) made the problem obvious: nothing in the grammar *forced* it to
+  stop, so generation hit the token safety limit without ever completing
+  the JSON. The fix was to replace the free repetition with a **bounded**
+  one (`_bounded_repeat` in `grammar.py`, with a reasonable maximum number
+  of characters/digits) for strings and numbers: still perfectly valid
+  JSON, but now the grammar alone guarantees that generation terminates.
+- **Exact vocabulary format.** The assignment does not specify the exact
+  format returned by `get_path_to_vocab_file()`. `vocabulary.py` was
+  written to accept several reasonable formats (`{"piece": id}`,
+  `{"id": "piece"}`, a list indexed by id) and, more importantly, to
+  invert the *byte-level BPE* scheme used by GPT-2/Qwen-style tokenizers
+  (where each of the 256 possible byte values is represented by a
+  printable Unicode character, e.g. `Ġ` for a leading space).
+- **`from llm_sdk import Small_LLM_Model` actually resolving.** The
+  provided `llm_sdk` package ships its own `pyproject.toml`/`uv.lock`
+  (with `torch`, `transformers`, `huggingface-hub` as dependencies) one
+  level above the importable `llm_sdk/` package folder. Simply copying it
+  next to `src/` is not enough for the import to resolve, and a plain
+  `uv sync` at the repo root would not install its heavy dependencies.
+  The fix was declaring it as a local, editable path dependency
+  (`[tool.uv.sources]` in the root `pyproject.toml`), so a single
+  `uv sync` builds and installs `llm_sdk` — and transitively `torch`,
+  `transformers`, `huggingface-hub` — into the same virtual environment.
+- **`sdk.encode()` returns a tensor, not a flat list.** An early version
+  did `input_ids = list(sdk.encode(prompt))`, which happens to work
+  against a flat-list test double but silently breaks against the real
+  SDK, whose `encode()` returns a `(1, sequence_length)` tensor: `list()`
+  on that only yields a single nested element instead of token ids. This
+  is exactly the kind of bug that a mock-only test suite cannot catch by
+  itself (see `test_encode_returning_a_2d_tensor_like_object_is_flattened`
+  in `tests/test_generator.py`). The fix was a small `_encoded_to_ids`
+  helper that flattens whatever array-like object `encode()` returns
+  (tensor, nested list, or flat list) into a plain `list[int]`.
+- **`mypy` and `numpy`'s stubs.** With a very recent `numpy`, its own stub
+  files use a syntax (`type X = ...`, PEP 695) that is only valid when
+  analyzed as Python 3.12+, which clashed with this project's
+  `python_version = "3.10"` and made `mypy` fail with a syntax error
+  inside a dependency, not in our own code. This was fixed by pinning
+  `numpy` to a version before that change (`numpy<2.2` in
+  `pyproject.toml`).
 
-## Estrategia de pruebas
+## Testing strategy
 
-Como el `llm_sdk` real no está disponible en este entorno de desarrollo
-(es material distribuido por la escuela), la validación se ha dividido en
-dos niveles, ambos en `tests/` (no se entregan como parte evaluada, solo
-como verificación propia — Sec. IV.3):
+Validation is split across two levels, both under `tests/` (not submitted
+or graded, only used as our own verification — Sec. IV.3):
 
-1. **Gramática en aislamiento** (`test_grammar.py`): se alimenta el
-   autómata carácter a carácter con salidas construidas a mano —válidas
-   e inválidas— comprobando que acepta exactamente lo que debe (números
-   con signo/decimales, strings con comillas escapadas, booleanos,
-   funciones sin parámetros) y rechaza lo que no debe (nombre de función
-   desconocido, tipo de argumento incorrecto, coma sobrante).
-2. **Generador con un SDK simulado** (`test_generator.py`): un mock de
-   `Small_LLM_Model` con vocabulario a nivel de carácter y logits
-   deliberadamente adversariales (puntuando altísimo un carácter que
-   rompería la sintaxis) demuestra que, aun así, la salida final es 100 %
-   válida y con los tipos correctos — precisamente la garantía que pide
-   el enunciado, independiente de la calidad del modelo.
-3. Además, `test_io_utils.py` y `test_vocabulary.py` cubren los casos
-   límite de entrada explícitamente mencionados en el enunciado: archivos
-   ausentes, JSON malformado, estructuras con el tipo equivocado, y
-   varios formatos posibles del archivo de vocabulario.
+1. **Grammar in isolation** (`test_grammar.py`): the automaton is fed
+   hand-built outputs, character by character — both valid and invalid —
+   checking that it accepts exactly what it should (signed/decimal
+   numbers, strings with escaped quotes, booleans, parameter-less
+   functions) and rejects what it shouldn't (unknown function name, wrong
+   argument type, a trailing comma).
+2. **Generator with a mocked SDK** (`test_generator.py`): a mock of
+   `Small_LLM_Model` with a character-level vocabulary and deliberately
+   adversarial logits (scoring a syntax-breaking character extremely
+   high) demonstrates that the final output is still 100% valid, with the
+   correct types — precisely the guarantee the assignment asks for,
+   independent of model quality. It also exercises a tensor-shaped
+   `encode()` return value, matching the real SDK's interface.
+3. `test_io_utils.py` and `test_vocabulary.py` additionally cover the
+   input edge cases explicitly mentioned in the assignment: missing
+   files, malformed JSON, wrong top-level types, and the several possible
+   vocabulary file formats.
 
-Antes de la evaluación real, conviene además ejecutar `make run` una vez
-con el `llm_sdk` real y `Qwen/Qwen3-0.6B` para confirmar tiempos y
-observar ejemplos de selección de función con el modelo de verdad.
+Before the real evaluation, it is also worth running `make run` once with
+the real `llm_sdk` and `Qwen/Qwen3-0.6B` to confirm timing and look at a
+few real function-selection examples with the actual model.
 
-## Ejemplos de uso
+## Example usage
 
 ```bash
 $ make run
-Procesados 3/3 prompts correctamente (0 fallos). Salida escrita en data/output/function_calling_results.json.
+Procesados 11/11 prompts correctamente (0 fallos). Salida escrita en data/output/function_calling_results.json.
 
 $ cat data/output/function_calling_results.json
 [
   {
     "prompt": "What is the sum of 2 and 3?",
-    "fn_name": "fn_add_numbers",
-    "args": {"a": 2, "b": 3}
+    "name": "fn_add_numbers",
+    "parameters": {"a": 2, "b": 3}
+  },
+  {
+    "prompt": "Greet shrek",
+    "name": "fn_greet",
+    "parameters": {"name": "shrek"}
   },
   {
     "prompt": "Reverse the string 'hello'",
-    "fn_name": "fn_reverse_string",
-    "args": {"s": "hello"}
-  },
-  {
-    "prompt": "Is dark mode currently enabled?",
-    "fn_name": "fn_get_flag_state",
-    "args": {"flag_name": "dark_mode"}
+    "name": "fn_reverse_string",
+    "parameters": {"s": "hello"}
   }
 ]
 ```
 
-Con rutas personalizadas:
+With custom paths:
 
 ```bash
-uv run python -m src --input data/input/otros_prompts.json \
-                     --definitions data/input/otras_funciones.json \
-                     --output data/output/resultado.json
+uv run python -m src --input data/input/other_prompts.json \
+                     --functions_definition data/input/other_functions.json \
+                     --output data/output/result.json
 ```

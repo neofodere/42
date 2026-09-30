@@ -37,10 +37,10 @@ class LLMSDK(Protocol):
     def get_logits_from_input_ids(self, input_ids: Any) -> Any:
         ...
 
-    def get_path_to_vocabulary_json(self) -> str:
+    def get_path_to_vocab_file(self) -> str:
         ...
 
-    def encode(self, text: str) -> list[int]:
+    def encode(self, text: str) -> Any:
         ...
 
 
@@ -96,6 +96,20 @@ def _logits_to_array(logits: Any) -> np.ndarray[Any, Any]:
     return np.asarray(array.reshape(-1))
 
 
+def _encoded_to_ids(encoded: Any) -> list[int]:
+    """Coerce whatever ``sdk.encode`` returns into a flat ``list[int]``.
+
+    Per Sec. V.3.1 of the assignment, ``encode(text: str) -> Tensor``: the
+    real SDK returns a 2-D tensor shaped ``(1, sequence_length)``. We also
+    accept an already-flat ``list[int]`` (used by lightweight test
+    doubles), or any other nested array-like structure, by round-tripping
+    through numpy and flattening.
+    """
+    raw = encoded.tolist() if hasattr(encoded, "tolist") else encoded
+    array = np.asarray(raw)
+    return [int(x) for x in array.reshape(-1)]
+
+
 def generate_function_call(
     sdk: LLMSDK,
     vocabulary: Vocabulary,
@@ -111,8 +125,8 @@ def generate_function_call(
         functions: The available function definitions.
 
     Returns:
-        A dict with keys ``fn_name`` and ``args``, guaranteed to satisfy the
-        grammar built from ``functions``.
+        A dict with keys ``name`` and ``parameters``, guaranteed to satisfy
+        the grammar built from ``functions``.
 
     Raises:
         GenerationError: If the model cannot produce a valid completion
@@ -122,7 +136,7 @@ def generate_function_call(
     full_prompt = build_prompt(prompt_text, functions)
 
     try:
-        input_ids = list(sdk.encode(full_prompt))
+        input_ids = _encoded_to_ids(sdk.encode(full_prompt))
     except Exception as exc:  # pragma: no cover - depends on external SDK
         raise GenerationError(f"Fallo al tokenizar el prompt: {exc}") from exc
 
@@ -176,4 +190,4 @@ def generate_function_call(
             f"gramatica: {grammar.generated_text!r} ({exc})"
         ) from exc
 
-    return {"fn_name": parsed.get("function"), "args": parsed.get("arguments", {})}
+    return {"name": parsed.get("function"), "parameters": parsed.get("arguments", {})}

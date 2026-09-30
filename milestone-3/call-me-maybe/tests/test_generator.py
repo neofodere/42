@@ -38,7 +38,7 @@ class _AdversarialMockSDK:
     def encode(self, text: str) -> list[int]:
         return [0]  # content is irrelevant to this mock's fixed logits
 
-    def get_path_to_vocabulary_json(self) -> str:
+    def get_path_to_vocab_file(self) -> str:
         return ""  # unused: tests build the Vocabulary directly
 
     def get_logits_from_input_ids(self, input_ids: list[int]) -> np.ndarray[Any, Any]:
@@ -85,11 +85,11 @@ def test_output_is_always_valid_despite_adversarial_scores(
     # Structural validity holds no matter how adversarial the raw scores
     # are: a real function name, exactly the right argument keys, and
     # values of the declared types.
-    assert result["fn_name"] in {fn.name for fn in functions}
-    chosen = next(fn for fn in functions if fn.name == result["fn_name"])
-    assert set(result["args"].keys()) == set(chosen.parameters.keys())
+    assert result["name"] in {fn.name for fn in functions}
+    chosen = next(fn for fn in functions if fn.name == result["name"])
+    assert set(result["parameters"].keys()) == set(chosen.parameters.keys())
     for key, spec in chosen.parameters.items():
-        value = result["args"][key]
+        value = result["parameters"][key]
         if spec.type in ("number", "integer"):
             assert isinstance(value, (int, float))
             # '#' is not a legal JSON number character: if masking ever
@@ -119,10 +119,35 @@ def test_poison_token_never_leaks_into_a_numeric_argument() -> None:
 
     result = generate_function_call(sdk, vocabulary, "2 plus 3", functions)
 
-    assert result["fn_name"] == "fn_add_numbers"
+    assert result["name"] == "fn_add_numbers"
     assert POISON_CHAR not in str(result)
-    assert isinstance(result["args"]["a"], (int, float))
-    assert isinstance(result["args"]["b"], (int, float))
+    assert isinstance(result["parameters"]["a"], (int, float))
+    assert isinstance(result["parameters"]["b"], (int, float))
+
+
+def test_encode_returning_a_2d_tensor_like_object_is_flattened(
+    functions: list[FunctionDefinition],
+) -> None:
+    # The real SDK's encode() returns a (1, seq_len) tensor (Sec. V.3.1),
+    # not a flat list. A minimal stand-in with a .tolist() that yields a
+    # nested list exercises that exact shape without needing torch.
+    class _NestedTensorLike:
+        def __init__(self, ids: list[int]) -> None:
+            self._ids = ids
+
+        def tolist(self) -> list[list[int]]:
+            return [self._ids]
+
+    class _TensorEncodingMockSDK(_AdversarialMockSDK):
+        def encode(self, text: str) -> Any:
+            return _NestedTensorLike([0, 1, 2])
+
+    vocabulary = _build_char_vocabulary()
+    sdk = _TensorEncodingMockSDK(vocabulary)
+
+    result = generate_function_call(sdk, vocabulary, "What is the sum of 2 and 3?", functions)
+
+    assert result["name"] in {fn.name for fn in functions}
 
 
 def test_raises_generation_error_when_no_function_fits_alphabet() -> None:
@@ -137,7 +162,7 @@ def test_raises_generation_error_when_no_function_fits_alphabet() -> None:
         def encode(self, text: str) -> list[int]:
             return [0]
 
-        def get_path_to_vocabulary_json(self) -> str:
+        def get_path_to_vocab_file(self) -> str:
             return ""
 
         def get_logits_from_input_ids(self, input_ids: list[int]) -> np.ndarray[Any, Any]:

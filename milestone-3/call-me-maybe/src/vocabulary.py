@@ -1,6 +1,6 @@
 """Vocabulary loading and token-piece decoding.
 
-``Small_LLM_Model.get_path_to_vocabulary_json`` gives us a JSON file mapping
+``Small_LLM_Model.get_path_to_vocab_file`` gives us a JSON file mapping
 between token ids and token pieces. Modern byte-level BPE tokenizers (GPT-2,
 Llama-3, Qwen2/Qwen3, ...) store vocabularies where each *byte* 0-255 is
 remapped to a printable unicode character, so that arbitrary binary data can
@@ -112,7 +112,7 @@ def load_vocabulary(vocabulary_path: Path, sdk: DecodeCapable | None = None) -> 
 
     Args:
         vocabulary_path: Path returned by
-            ``Small_LLM_Model.get_path_to_vocabulary_json``.
+            ``Small_LLM_Model.get_path_to_vocab_file``.
         sdk: The LLM SDK instance, used opportunistically to validate (and,
             for a handful of tokens, cross-check) the decoding scheme via
             its optional ``decode`` method.

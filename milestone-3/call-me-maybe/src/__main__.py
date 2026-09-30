@@ -1,8 +1,10 @@
-"""Entrypoint for ``uv run python -m src [--input <file>] [--output <file>]``.
+"""Entrypoint for ``uv run python -m src [--functions_definition <file>]
+[--input <file>] [--output <file>]``.
 
 Per the assignment (Sec. IV.3.2), by default input is read from
-``data/input/`` and output written to ``data/output/``; ``--input``/
-``--output`` let the caller override the paths.
+``data/input/`` and output written to ``data/output/``;
+``--functions_definition``/``--input``/``--output`` let the caller
+override the paths.
 """
 
 from __future__ import annotations
@@ -16,7 +18,7 @@ from src.io_utils import InputFileError, load_function_definitions, load_prompts
 from src.vocabulary import load_vocabulary
 
 DEFAULT_TESTS_FILE = Path("data/input/function_calling_tests.json")
-DEFAULT_DEFINITIONS_FILE = Path("data/input/function_definitions.json")
+DEFAULT_DEFINITIONS_FILE = Path("data/input/functions_definition.json")
 DEFAULT_OUTPUT_FILE = Path("data/output/function_calling_results.json")
 
 
@@ -44,12 +46,12 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         help="Ruta del JSON de salida. Por defecto: data/output/function_calling_results.json",
     )
     parser.add_argument(
-        "--definitions",
+        "--functions_definition",
         type=Path,
         default=DEFAULT_DEFINITIONS_FILE,
         help=(
             "Ruta al archivo de definiciones de funcion. "
-            "Por defecto: data/input/function_definitions.json"
+            "Por defecto: data/input/functions_definition.json"
         ),
     )
     return parser.parse_args(argv)
@@ -62,7 +64,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         prompts = load_prompts(tests_path)
-        functions = load_function_definitions(args.definitions)
+        functions = load_function_definitions(args.functions_definition)
     except InputFileError as exc:
         print(f"Error de configuracion: {exc}", file=sys.stderr)
         return 1
@@ -85,7 +87,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     try:
-        vocabulary = load_vocabulary(Path(sdk.get_path_to_vocabulary_json()), sdk=sdk)
+        vocabulary = load_vocabulary(Path(sdk.get_path_to_vocab_file()), sdk=sdk)
     except Exception as exc:
         print(f"Error al cargar el vocabulario del modelo: {exc}", file=sys.stderr)
         return 1
@@ -99,7 +101,9 @@ def main(argv: list[str] | None = None) -> int:
             failures += 1
             print(f"Aviso: no se pudo procesar el prompt {prompt!r}: {exc}", file=sys.stderr)
             continue
-        results.append({"prompt": prompt, "fn_name": call["fn_name"], "args": call["args"]})
+        results.append(
+            {"prompt": prompt, "name": call["name"], "parameters": call["parameters"]}
+        )
 
     try:
         save_results(args.output, results)

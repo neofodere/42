@@ -6,6 +6,7 @@ requires-python = ">=3.10"
 dependencies = [
     "numpy>=1.26,<2.2",
     "pydantic>=2.6",
+    "llm-sdk",
 ]
 
 [dependency-groups]
@@ -15,6 +16,16 @@ dev = [
     "flake8>=7.0",
 ]
 
+# ``llm_sdk`` is the package provided by 42 (Sec. IV.3.1: "copy it in the
+# same directory as the one src is in"). Declaring it here as a local,
+# editable path dependency means a plain `uv sync` at the repo root also
+# installs llm_sdk's own dependencies (torch, transformers,
+# huggingface-hub) into the same virtual environment, so
+# `from llm_sdk import Small_LLM_Model` resolves without any extra setup
+# step for the reviewer/moulinette.
+[tool.uv.sources]
+llm-sdk = { path = "llm_sdk", editable = true }
+
 [tool.mypy]
 python_version = "3.10"
 warn_return_any = true
@@ -22,6 +33,11 @@ warn_unused_ignores = true
 ignore_missing_imports = true
 disallow_untyped_defs = true
 check_untyped_defs = true
+# llm_sdk/ is vendored, unmodified material provided by the school (not
+# authored by this project) -- it is intentionally excluded from our own
+# strict type-checking, the same way third-party/vendored code normally
+# would be.
+exclude = ["^llm_sdk/"]
 
 [[tool.mypy.overrides]]
 module = "llm_sdk.*"

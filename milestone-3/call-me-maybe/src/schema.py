@@ -48,7 +48,7 @@ class ReturnSpec(BaseModel):
 
 
 class FunctionDefinition(BaseModel):
-    """A single entry of ``function_definitions.json``.
+    """A single entry of ``functions_definition.json``.
 
     Attributes:
         name: The callable function's identifier (e.g. ``fn_add_numbers``).
@@ -68,10 +68,10 @@ class FunctionCallResult(BaseModel):
 
     Attributes:
         prompt: The original natural language request.
-        fn_name: The name of the function chosen by the model.
-        args: The generated arguments, already type-coerced.
+        name: The name of the function chosen by the model.
+        parameters: The generated arguments, already type-coerced.
     """
 
     prompt: str
-    fn_name: str
-    args: dict[str, Any]
+    name: str
+    parameters: dict[str, Any]

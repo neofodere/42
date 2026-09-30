@@ -30,9 +30,25 @@ def test_load_prompts_wrong_top_level_type(tmp_path: Path) -> None:
 
 
 def test_load_prompts_happy_path(tmp_path: Path) -> None:
+    # Sec. V.2 format: an array of {"prompt": "..."} objects.
+    path = tmp_path / "tests.json"
+    path.write_text(
+        json.dumps([{"prompt": "a"}, {"prompt": "b"}]), encoding="utf-8"
+    )
+    assert load_prompts(path) == ["a", "b"]
+
+
+def test_load_prompts_accepts_bare_strings_too(tmp_path: Path) -> None:
     path = tmp_path / "tests.json"
     path.write_text(json.dumps(["a", "b"]), encoding="utf-8")
     assert load_prompts(path) == ["a", "b"]
+
+
+def test_load_prompts_rejects_object_without_prompt_key(tmp_path: Path) -> None:
+    path = tmp_path / "tests.json"
+    path.write_text(json.dumps([{"not_prompt": "a"}]), encoding="utf-8")
+    with pytest.raises(InputFileError, match="prompt"):
+        load_prompts(path)
 
 
 def test_load_function_definitions_missing_file(tmp_path: Path) -> None:
@@ -69,8 +85,8 @@ def test_load_function_definitions_happy_path(tmp_path: Path) -> None:
 
 def test_save_results_creates_parent_dirs(tmp_path: Path) -> None:
     out_path = tmp_path / "nested" / "output.json"
-    save_results(out_path, [{"prompt": "p", "fn_name": "f", "args": {}}])
+    save_results(out_path, [{"prompt": "p", "name": "f", "parameters": {}}])
     assert out_path.exists()
     assert json.loads(out_path.read_text(encoding="utf-8")) == [
-        {"prompt": "p", "fn_name": "f", "args": {}}
+        {"prompt": "p", "name": "f", "parameters": {}}
     ]

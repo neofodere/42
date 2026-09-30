@@ -54,16 +54,17 @@ def load_prompts(path: Path) -> list[str]:
     """Load the list of natural-language prompts to process.
 
     Args:
-        path: Path to ``function_calling_tests.json``.
+        path: Path to ``function_calling_tests.json``. Per Sec. V.2 of the
+            assignment, each entry is a JSON object ``{"prompt": "..."}``;
+            a bare string entry is also accepted for convenience.
 
     Returns:
-        A list of prompt strings. Non-string or empty entries are skipped
-        with a warning-free, best-effort approach so that one bad row does
-        not prevent processing the rest of a large batch.
+        A list of prompt strings.
 
     Raises:
-        InputFileError: If the file is missing, malformed, or is not a
-            JSON array.
+        InputFileError: If the file is missing, malformed, is not a JSON
+            array, or an entry is neither a string nor an object with a
+            string ``"prompt"`` field.
     """
     data = _read_json_file(path)
     if not isinstance(data, list):
@@ -73,12 +74,16 @@ def load_prompts(path: Path) -> list[str]:
         )
     prompts: list[str] = []
     for index, item in enumerate(data):
-        if not isinstance(item, str):
-            raise InputFileError(
-                f"{path}: el elemento en la posicion {index} no es una "
-                f"cadena de texto ({item!r})"
-            )
-        prompts.append(item)
+        if isinstance(item, str):
+            prompts.append(item)
+            continue
+        if isinstance(item, dict) and isinstance(item.get("prompt"), str):
+            prompts.append(item["prompt"])
+            continue
+        raise InputFileError(
+            f"{path}: el elemento en la posicion {index} no es un objeto "
+            f'{{"prompt": "..."}} ni una cadena de texto ({item!r})'
+        )
     return prompts
 
 
@@ -86,7 +91,7 @@ def load_function_definitions(path: Path) -> list[FunctionDefinition]:
     """Load and validate the available function definitions.
 
     Args:
-        path: Path to ``function_definitions.json``.
+        path: Path to ``functions_definition.json``.
 
     Returns:
         A list of validated :class:`FunctionDefinition` objects.
@@ -121,7 +126,7 @@ def save_results(path: Path, results: list[dict[str, Any]]) -> None:
     Args:
         path: Destination path (parent directories are created if needed).
         results: List of plain dict entries, each matching the required
-            output schema (``prompt``, ``fn_name``, ``args``).
+            output schema (``prompt``, ``name``, ``parameters``).
 
     Raises:
         InputFileError: If the output file cannot be written.
