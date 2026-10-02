@@ -96,12 +96,9 @@ def _load_raw_mapping(path: Path) -> dict[int, str]:
         return {i: str(piece) for i, piece in enumerate(data)}
 
     if isinstance(data, dict):
-        # Peek at one item to decide which side holds the integer id.
         sample_key, sample_value = next(iter(data.items()))
         if isinstance(sample_value, int) and not str(sample_key).lstrip("-").isdigit():
-            # {"piece": id, ...}
             return {int(v): str(k) for k, v in data.items()}
-        # {"id": "piece", ...} (ids as string keys) or already {id: piece}.
         return {int(k): str(v) for k, v in data.items()}
 
     raise ValueError(f"Formato de vocabulario no soportado en {path}")
@@ -130,22 +127,17 @@ def load_vocabulary(vocabulary_path: Path, sdk: DecodeCapable | None = None) -> 
             if char in char_to_byte:
                 raw_bytes.append(char_to_byte[char])
             else:
-                # Not part of the byte-level alphabet: likely a literal
-                # special token (e.g. "<|im_end|>"); keep it verbatim by
-                # re-encoding through utf-8 so the byte buffer stays valid.
                 raw_bytes.extend(char.encode("utf-8"))
         return raw_bytes.decode("utf-8", errors="replace")
 
     id_to_text = {token_id: decode_piece(piece) for token_id, piece in raw.items()}
 
     if sdk is not None and hasattr(sdk, "decode"):
-        # Cross-check on a small, cheap sample; if our heuristic disagrees
-        # with the SDK's own decoder, trust the SDK for those ids instead.
         sample_ids = list(id_to_text)[:20]
         for token_id in sample_ids:
             try:
                 reference = sdk.decode([token_id])
-            except Exception:  # pragma: no cover - defensive, SDK-dependent
+            except Exception:
                 break
             if reference and reference != id_to_text[token_id]:
                 id_to_text[token_id] = reference

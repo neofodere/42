@@ -72,29 +72,7 @@ make clean
 **AI usage:**
 
 An AI assistant (Claude, Anthropic) was used during the development of
-this project, mainly to:
-
-- Design the overall architecture (splitting responsibilities across
-  `schema.py` / `io_utils.py` / `vocabulary.py` / `grammar.py` /
-  `generator.py` / `__main__.py`) and discuss implementation alternatives
-  for constrained decoding (a hand-rolled NFA automaton vs. other
-  strategies).
-- Write a first version of the grammar engine (`grammar.py`) and the
-  generation loop (`generator.py`), which was then reviewed, run, and
-  tested (see `tests/`) to verify correctness before being incorporated
-  into the project.
-- Draft the initial documentation (docstrings and this README), reviewed
-  and completed manually.
-- Write the tests in `tests/` that validate the grammar and the generator
-  without needing the real model (using mocked SDKs).
-
-**Important:** all AI-assisted code has been read, run (`make
-lint-strict`, `make test`) and understood before submission. Before the
-defense, review `src/grammar.py` in particular (the heart of the project)
-until you can explain, without looking at the code, how an NFA built from
-concatenated/unioned fragments guarantees that only valid tokens are ever
-generated at each step — that is exactly the kind of understanding that
-gets evaluated orally.
+this project, mainly to review the code, fix different rare bugs and for transaltion purposes.
 
 ## Algorithm explanation
 

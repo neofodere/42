@@ -31,11 +31,6 @@ from src.schema import FunctionDefinition
 CharPredicate = Callable[[str], bool]
 
 
-# --------------------------------------------------------------------------
-# Low-level NFA plumbing
-# --------------------------------------------------------------------------
-
-
 class _StateGraph:
     """Owns every state and transition of one compiled grammar."""
 
@@ -88,11 +83,6 @@ class _Fragment:
 
     start: int
     accepts: frozenset[int]
-
-
-# --------------------------------------------------------------------------
-# Regex-like combinators (Thompson-style construction)
-# --------------------------------------------------------------------------
 
 
 def _make_equals_predicate(expected: str) -> CharPredicate:
@@ -204,10 +194,6 @@ def _bounded_repeat(
     return _concat(graph, slots)
 
 
-# Safety caps for otherwise-unbounded JSON values: long enough for any
-# realistic function-calling argument, short enough to guarantee the
-# decoding loop always terminates well within MAX_NEW_TOKENS even if the
-# model always prefers "keep going" over closing the value.
 MAX_STRING_CHARS = 120
 MAX_NUMBER_DIGITS = 18
 
@@ -313,8 +299,6 @@ def _value_fragment(graph: _StateGraph, value_type: str) -> _Fragment:
         return _number_fragment(graph, allow_fraction=False)
     if value_type == "number":
         return _number_fragment(graph, allow_fraction=True)
-    # Unknown/unsupported declared type: fall back to a JSON string so the
-    # decoder always stays well-defined instead of crashing on odd input.
     return _string_fragment(graph)
 
 
@@ -335,11 +319,6 @@ def _function_fragment(graph: _StateGraph, fn: FunctionDefinition) -> _Fragment:
 
     footer = _literal(graph, "}}")
     return _concat(graph, [header, params_fragment, footer])
-
-
-# --------------------------------------------------------------------------
-# Public grammar object
-# --------------------------------------------------------------------------
 
 
 class FunctionCallGrammar:

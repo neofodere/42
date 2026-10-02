@@ -42,6 +42,7 @@ exclude = ["^llm_sdk/"]
 [[tool.mypy.overrides]]
 module = "llm_sdk.*"
 ignore_missing_imports = true
+follow_imports = "skip"
 
 
 

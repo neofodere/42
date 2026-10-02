@@ -26,8 +26,8 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description=(
-            "Traduce peticiones en lenguaje natural en llamadas a funcion "
-            "estructuradas, usando decodificacion restringida."
+            "Translate natural language requests into structured function "
+            "calls using restricted decoding."
         ),
     )
     parser.add_argument(
@@ -35,23 +35,23 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         type=Path,
         default=None,
         help=(
-            "Ruta al archivo de prompts (function_calling_tests.json). "
-            "Por defecto: data/input/function_calling_tests.json"
+            "Path to the prompts file (function_calling_tests.json). "
+            "Default: data/input/function_calling_tests.json"
         ),
     )
     parser.add_argument(
         "--output",
         type=Path,
         default=DEFAULT_OUTPUT_FILE,
-        help="Ruta del JSON de salida. Por defecto: data/output/function_calling_results.json",
+        help="Path to the output JSON file. Default: data/output/function_calling_results.json",
     )
     parser.add_argument(
         "--functions_definition",
         type=Path,
         default=DEFAULT_DEFINITIONS_FILE,
         help=(
-            "Ruta al archivo de definiciones de funcion. "
-            "Por defecto: data/input/functions_definition.json"
+            "Path to the function definitions file. "
+            "Default: data/input/functions_definition.json"
         ),
     )
     return parser.parse_args(argv)
@@ -66,16 +66,16 @@ def main(argv: list[str] | None = None) -> int:
         prompts = load_prompts(tests_path)
         functions = load_function_definitions(args.functions_definition)
     except InputFileError as exc:
-        print(f"Error de configuracion: {exc}", file=sys.stderr)
+        print(f"Config error: {exc}", file=sys.stderr)
         return 1
 
     try:
-        from llm_sdk import Small_LLM_Model  # imported lazily: heavy dependency
+        from llm_sdk import Small_LLM_Model
     except ImportError as exc:
         print(
-            "Error: no se pudo importar 'llm_sdk.Small_LLM_Model'. "
-            "Asegurate de haber copiado el directorio llm_sdk/ junto a src/. "
-            f"Detalle: {exc}",
+            "Error: Could not import ‘llm_sdk.Small_LLM_Model’. "
+            "Make sure you've copied the llm_sdk/ directory next to src/. "
+            f"Details: {exc}",
             file=sys.stderr,
         )
         return 1
@@ -83,13 +83,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         sdk = Small_LLM_Model()
     except Exception as exc:
-        print(f"Error al inicializar el modelo LLM: {exc}", file=sys.stderr)
+        print(f"Error initializing the LLM model: {exc}", file=sys.stderr)
         return 1
 
     try:
         vocabulary = load_vocabulary(Path(sdk.get_path_to_vocab_file()), sdk=sdk)
     except Exception as exc:
-        print(f"Error al cargar el vocabulario del modelo: {exc}", file=sys.stderr)
+        print(f"Error loading the model vocabulary: {exc}", file=sys.stderr)
         return 1
 
     results = []
@@ -99,7 +99,7 @@ def main(argv: list[str] | None = None) -> int:
             call = generate_function_call(sdk, vocabulary, prompt, functions)
         except GenerationError as exc:
             failures += 1
-            print(f"Aviso: no se pudo procesar el prompt {prompt!r}: {exc}", file=sys.stderr)
+            print(f"Notice: The prompt could not be processed {prompt!r}: {exc}", file=sys.stderr)
             continue
         results.append(
             {"prompt": prompt, "name": call["name"], "parameters": call["parameters"]}
@@ -108,16 +108,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         save_results(args.output, results)
     except InputFileError as exc:
-        print(f"Error al guardar los resultados: {exc}", file=sys.stderr)
+        print(f"Error at saving results: {exc}", file=sys.stderr)
         return 1
 
     print(
-        f"Procesados {len(results)}/{len(prompts)} prompts correctamente "
-        f"({failures} fallos). Salida escrita en {args.output}."
+        f"Processed {len(results)}/{len(prompts)} prompts correctly "
+        f"({failures} failures). Correct output at {args.output}."
     )
-    # Exit 0 on full or partial success (individual prompt failures are
-    # reported above but do not abort the batch); only exit 1 when every
-    # single prompt failed, since then the output file is effectively empty.
     total_failure = failures > 0 and not results
     return 1 if total_failure else 0
 

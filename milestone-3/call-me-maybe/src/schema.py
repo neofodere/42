@@ -12,7 +12,6 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-# JSON-schema-like primitive types we know how to constrain-decode.
 SupportedType = Literal["number", "integer", "string", "boolean"]
 
 
