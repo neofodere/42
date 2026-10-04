@@ -1,0 +1,17 @@
+# Maze Settings
+WIDTH=20
+HEIGHT=20
+
+# Start and End coordinates
+ENTRY=0,0
+EXIT=4,4
+
+# Output Settings
+OUTPUT_FILE=maze.txt
+
+# Generation rules
+PERFECT=True
+#SEED=4242
+#ALGORITHM=DFS
+#DISPLAY_MODE=mlx
+#VERBOSE=True

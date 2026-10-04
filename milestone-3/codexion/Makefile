@@ -3,24 +3,24 @@ NAME	= codexion
 CC	= cc
 CFLAGS	= -Wall -Wextra -Werror -pthread
 
-SRCS	= coders/main.c \
-          coders/parsing.c \
-          coders/parsing_utils.c \
-          coders/init.c \
-          coders/simulation.c \
-          coders/cleanup.c \
-          coders/utils.c \
-          coders/sync_utils.c \
-          coders/heap.c \
-          coders/heap_remove.c \
-          coders/heap_conflict.c \
-          coders/dongle.c \
-          coders/dongle_release.c \
-          coders/coder.c \
-          coders/monitor.c
+SRCS	= main.c \
+          parsing.c \
+          parsing_utils.c \
+          init.c \
+          simulation.c \
+          cleanup.c \
+          utils.c \
+          sync_utils.c \
+          heap.c \
+          heap_remove.c \
+          heap_conflict.c \
+          dongle.c \
+          dongle_release.c \
+          coder.c \
+          monitor.c
 
 OBJS	= $(SRCS:.c=.o)
-HEADER	= coders/codexion.h
+HEADER	= codexion.h
 
 all: $(NAME)
 
